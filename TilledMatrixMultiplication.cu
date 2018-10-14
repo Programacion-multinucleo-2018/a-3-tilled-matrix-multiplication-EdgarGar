@@ -33,7 +33,6 @@ __global__ void matrixMultOnHostGPU(int *a, int *b, int *c) {
  }
 }*/
 
-// grid 1D block 1D
 __global__ void multMatrixOnGPU2D(float *MatA, float *MatB, float *MatC, int nx, int ny){
   unsigned int ix = threadIdx.x + blockIdx.x * blockDim.x;
   unsigned int iy = threadIdx.y + blockIdx.y * blockDim.y;
@@ -41,18 +40,6 @@ __global__ void multMatrixOnGPU2D(float *MatA, float *MatB, float *MatC, int nx,
   if (ix < nx && iy < ny) {
     for(int i = 0; i < ny; i++) {
       MatC[ix*ny+iy] += MatA[ix*ny+i] * MatB[i*ny+iy];
-    }
-  }
-}
-
-//Funcion obtenida de la primera tarea
-void matrixMultOnHost(float *A, float *B, float *C, const int nx, const int ny) {
-  for(int i = 0; i < ny; i++) {
-    for(int j = 0; j < nx; j++) {
-      for(int k = 0; k < ny; k++) {
-        ////Operacion para hacer la regla del karatzo fila por culumna
-        C[i * nx + j] += (A[i * nx + k] * B[k + nx * j]);
-      }
     }
   }
 }
@@ -105,22 +92,39 @@ __global__ void multMatrixOnTiles(float *A, float *B, float *C, int nx, int ny) 
     }
 }
 
-
-//Funcion que checa el resultado el cual ya teniamos de la primera tarea
-void checkResult(float *hostRef, float *gpuRef, const int N){
-  double epsilon = 1.0E-8;
-  bool match = 1;
-  for (int i = 0; i < N*N; i++){
-    if (fabs(hostRef[i] - gpuRef[i]) > epsilon){
-      match = 0;
-      printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
-      break;
+//Funcion obtenida de la primera tarea
+void matrixMultOnHost(float *A, float *B, float *C, const int nx, const int ny) {
+  for(int i = 0; i < ny; i++) {
+    for(int j = 0; j < nx; j++) {
+      for(int k = 0; k < ny; k++) {
+        ////Operacion para hacer la regla del karatzo fila por culumna
+        C[i * nx + j] += (A[i * nx + k] * B[k + nx * j]);
+      }
     }
   }
-  if (match)
-  printf("Matrix multiplications from host and GPU match!.\n\n");
-  else
-  printf("Arrays do not match.\n\n");
+}
+
+
+//Funcion que checa el resultado el cual ya teniamos de la primera tarea
+void checkResult(float *hostRef, float *gpuRef, const int N)
+{
+    double epsilon = 1.0E-8;
+    bool match = 1;
+
+    for (int i = 0; i < N*N; i++)
+    {
+        if (fabs(hostRef[i] - gpuRef[i]) > epsilon)
+        {
+            match = 0;
+            printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
+            break;
+        }
+    }
+
+    if (match)
+        printf("Matrix multiplications from host and GPU match!.\n\n");
+    else
+        printf("Arrays do not match.\n\n");
 }
 
 //Main que ya teniamos de los otros ejemplos solo cambio nombres de la funciones y mandado a llamar de algunas
@@ -188,7 +192,7 @@ int main(int argc, char **argv)
     duration_ms = end_cpu - start_cpu;
     timeAverage += duration_ms.count();
     int performanceTime = timeAverage;
-    printf("Tiempor en tardar en ejecutar con threads es de: %d ms\n", performanceTime);
+    printf("Tiempo que tarda ejecutar con threads: %d ms\n", performanceTime);
     printf("Tamano de matriz: %d x %d\n", nx, ny);
 
     // SAFE_CALL kernel error
