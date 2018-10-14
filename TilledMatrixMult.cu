@@ -116,9 +116,9 @@ void checkResult(float *hostRef, float *gpuRef, const int N)
     }
   }
   if (match)
-    printf("Matrix multiplications from host and GPU match!.\n\n");
+    printf("YES\n\n");
   else
-    printf("Arrays do not match.\n\n");
+    printf("No\n\n");
 }
 
 //Main que ya teniamos de los otros ejemplos solo cambio nombres de la funciones y mandado a llamar de algunas
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     int ny = NTM;
     int nxy = nx * ny;
     int nBytes = nxy * sizeof(float);
-    printf("Matrix size: nx %d ny %d\n", nx, ny);
+    printf("Tamano de la matriz: nx %d ny %d\n", nx, ny);
 
     // malloc host memory
     float *h_A, *h_B, *hostRef, *gpuRef;
