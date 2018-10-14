@@ -11,12 +11,13 @@ using namespace std;
 //Bloques en este caso se probara con tres 8*8, 16*16 y 32*32
 #define DIMMatrix 8
 
+
 //Funcion de llenado de la matriz en tre 0 y 10 obtenida de la primera tarea
-void initialData(float * ip, const int size) {
-  int i;
-  for(i = 0; i < size; i++) {
-    ip[i] = (rand() / (float)RAND_MAX * 10.0f);
-  }
+void fillMat(float * ip, const int size) {
+  int i
+    for(i = 0; i < size; i++) {
+        ip[i] = (rand() / (float)RAND_MAX * 10.0f);
+    }
 }
 
 /*
@@ -32,104 +33,96 @@ __global__ void matrixMultOnHostGPU(int *a, int *b, int *c) {
   c[fil * N + col] = sum;
  }
 }*/
-
-__global__ void multMatrixOnGPU2D(float *MatA, float *MatB, float *MatC, int nx, int ny){
+__global__ void multMatrixOnGPU2D(float *MatA, float *MatB, float *MatC, int nx, int ny)
+{
   unsigned int ix = threadIdx.x + blockIdx.x * blockDim.x;
   unsigned int iy = threadIdx.y + blockIdx.y * blockDim.y;
-
   if (ix < nx && iy < ny) {
     for(int i = 0; i < ny; i++) {
-      MatC[ix*ny+iy] += MatA[ix*ny+i] * MatB[i*ny+iy];
+      C[ix*ny+iy] += A[ix*ny+i] * B[i*ny+iy];
     }
   }
 }
 
 //Funcion de matrix mult con tiles
 __global__ void multMatrixOnTiles(float *A, float *B, float *C, int nx, int ny) {
+  float sum = 0;
+  //Algunas partes del codigo fueron obtenidas de los demos vistos en clase
+  unsigned int ix = threadIdx.x + blockIdx.x * DIMMatrix;
+  unsigned int iy = threadIdx.y + blockIdx.y * DIMMatrix;
 
-    float sum = 0;
-    //Codigo de clase
-    //int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int ix = threadIdx.x + blockIdx.x * DIMMatrix;
-    unsigned int iy = threadIdx.y + blockIdx.y * DIMMatrix;
+  __shared__ float matTempA[DIMMatrix][DIMMatrix];
+  __shared__ float matTempB[DIMMatrix][DIMMatrix];
 
-    //Codigo de clase demos
-    //__shared__ int s[256];
-    __shared__ float matTempA[DIMMatrix][DIMMatrix];
-    __shared__ float matTempB[DIMMatrix][DIMMatrix];
+  //Llenamos las matrices shared y las inicializamos con puros 0's
+  for(int i = 0; i < DIMMatrix; i ++) {
+    for(int j = 0; j < DIMMatrix; j++) {
+      matTempA[i][j] = 0;
+      matTempB[i][j] = 0;
+    }
+  }
 
-    //Inicalisacion de los areglos en 0
-    for(int i = 0; i < DIMMatrix; i ++) {
-        for(int j = 0; j < DIMMatrix; j++) {
-            matTempA[i][j] = 0;
-            matTempB[i][j] = 0;
-        }
+  //vamos a traves de todos los tiles
+  for(int i = (DIMMatrix + nx - 1)/DIMMatrix; i >= 0; i--) {
+    if((i * DIMMatrix + threadIdx.x) < nx && (iy < ny)) {
+      matTempA[threadIdx.y][threadIdx.x] = A[(iy*ny) + (i*DIMMatrix+threadIdx.x)];
     }
 
-    //vamos a traves de todos los tiles
-    for(int i = (DIMMatrix + nx - 1)/DIMMatrix; i >= 0; i--) {
-        if((i * DIMMatrix + threadIdx.x) < nx && (iy < ny)) {
-            matTempA[threadIdx.y][threadIdx.x] = A[(iy*ny) + (i*DIMMatrix+threadIdx.x)];
-        }
-
-        if((i * DIMMatrix + threadIdx.y) < ny && (ix < nx)) {
-            matTempB[threadIdx.y][threadIdx.x] = B[(i*DIMMatrix+threadIdx.y) * nx + ix];
-        }
-        //__syncthreads(); command is a block level synchronization barrier. That means it is safe to be used when all threads in a
-        //block reach the barrier. It is also possible to use __syncthreads() in conditional code but only when all
-        //threads evaluate identically such code otherwise
-        //the execution is likely to hang or produce unintended side effects
-        __syncthreads(); //Tenemos que utilizar syncthreads despues de modificar las matrices en threadIdx
-
-        for(int j = 0; j < DIMMatrix; j++) {
-            sum += matTempA[threadIdx.y][j] * matTempB[j][threadIdx.x];
-        }
-        __syncthreads();
+    if((i * DIMMatrix + threadIdx.y) < ny && (ix < nx)) {
+      matTempB[threadIdx.y][threadIdx.x] = B[(i*DIMMatrix+threadIdx.y) * nx + ix];
     }
+    /*//__syncthreads(); command is a block level synchronization barrier. That means it is safe to be used when all threads in a
+    //block reach the barrier. It is also possible to use __syncthreads() in conditional code but only when all
+    //threads evaluate identically such code otherwise
+    //the execution is likely to hang or produce unintended side effects*/
 
-    if(ix < nx && iy < ny) {
-        C[iy*ny+ix] = sum;
+    __syncthreads(); //Tenemos que utilizar syncthreads despues de modificar las matrices en threadIdx
+    for(int j = 0; j < DIMMatrix; j++) {
+      temp += matTempA[threadIdx.y][j] * matTempB[j][threadIdx.x];
     }
+    __syncthreads();
+  }
+  if(ix < nx && iy < ny) {
+    C[iy*ny+ix] = temp;
+  }
 }
 
-//Funcion obtenida de la primera tarea
-void matrixMultOnHost(float *A, float *B, float *C, const int nx, const int ny) {
+//Funcion obtenida de la primera matriz
+void multMat(float *A, float *B, float *C, const int nx, const int ny) {
   for(int i = 0; i < ny; i++) {
     for(int j = 0; j < nx; j++) {
       for(int k = 0; k < ny; k++) {
-        ////Operacion para hacer la regla del karatzo fila por culumna
+        //Operacion para hacer la regla del karatzo fila por culumna
         C[i * nx + j] += (A[i * nx + k] * B[k + nx * j]);
+        // printf("G"); //Debug
       }
     }
   }
 }
 
-
 //Funcion que checa el resultado el cual ya teniamos de la primera tarea
-void checkResult(float *hostRef, float *gpuRef, const int N)
-{
-    double epsilon = 1.0E-8;
-    bool match = 1;
+void checkResult(float *hostRef, float *gpuRef, const int N){
+  double epsilon = 1.0E-8;
+  bool match = 1;
 
-    for (int i = 0; i < N*N; i++)
-    {
-        if (fabs(hostRef[i] - gpuRef[i]) > epsilon)
-        {
-            match = 0;
-            printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
-            break;
-        }
+  for (int i = 0; i < N*N; i++){
+    if (fabs(hostRef[i] - gpuRef[i]) > epsilon){
+      match = 0;
+      printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
+      break;
     }
-
-    if (match)
-        printf("Matrix multiplications from host and GPU match!.\n\n");
-    else
-        printf("Arrays do not match.\n\n");
+  }
+  if (match)
+    printf("Matrix multiplications from host and GPU match!.\n\n");
+  else
+    printf("Arrays do not match.\n\n");
 }
 
 //Main que ya teniamos de los otros ejemplos solo cambio nombres de la funciones y mandado a llamar de algunas
 int main(int argc, char **argv)
 {
+    printf("%s Starting...\n", argv[0]);
+
     // set up device
     int dev = 0;
     cudaDeviceProp deviceProp;
@@ -152,15 +145,15 @@ int main(int argc, char **argv)
     gpuRef = (float *)malloc(nBytes);
 
     // Inicializar nuestros datos
-    initialData(h_A, nxy);
-    initialData(h_B, nxy);
+    fillMat(h_A, nxy);
+    fillMat(h_B, nxy);
 
     memset(hostRef, 0, nBytes);
     memset(gpuRef, 0, nBytes);
 
     // add matrix at host side for result SAFE_CALLs
     auto start_cpu =  chrono::high_resolution_clock::now();
-    matrixMultOnHost(h_A, h_B, hostRef, nx, ny);
+    multMat(h_A, h_B, hostRef, nx, ny);
     auto end_cpu =  chrono::high_resolution_clock::now();
     chrono::duration<float, std::milli> duration_ms = end_cpu - start_cpu;
 
@@ -183,8 +176,10 @@ int main(int argc, char **argv)
     dim3 grid((nx + block.x - 1) / block.x, (ny + block.y - 1) / block.y);
 
     //MULTMAT ON GPU 2D_2D (ya se tenia)
+    //Multiplicar matrices con cantidad de repeticiones
     int timeAverage = 0;
-    //kernel
+    // add matrix at host side for result SAFE_CALLs
+    //Lo sacamos del ejemplo de clase
     start_cpu =  chrono::high_resolution_clock::now();
     multMatrixOnGPU2D<<<grid, block>>>(d_MatA, d_MatB, d_MatC, nx, ny);
     SAFE_CALL(cudaDeviceSynchronize(), "Error executing kernel");
@@ -192,7 +187,7 @@ int main(int argc, char **argv)
     duration_ms = end_cpu - start_cpu;
     timeAverage += duration_ms.count();
     int performanceTime = timeAverage;
-    printf("Tiempo que tarda ejecutar con threads: %d ms\n", performanceTime);
+    printf("Ejecucion con GPU con threads: %d ms\n", performanceTime);
     printf("Tamano de matriz: %d x %d\n", nx, ny);
 
     // SAFE_CALL kernel error
@@ -207,7 +202,6 @@ int main(int argc, char **argv)
     //MULTMAT CON TILING GPU
     timeAverage = 0;
     // add matrix at host side for result SAFE_CALLs
-    //Lo sacamos del ejemplo de clase
     start_cpu =  chrono::high_resolution_clock::now();
     multMatrixOnTiles<<<grid, block>>>(d_MatA, d_MatB, d_MatC, nx, ny);
     SAFE_CALL(cudaDeviceSynchronize(), "Error executing kernel");
@@ -215,7 +209,7 @@ int main(int argc, char **argv)
     duration_ms = end_cpu - start_cpu;
     timeAverage += duration_ms.count();
     performanceTime = timeAverage;
-    printf("Ejecucion con TILING de %d x %d es alrededor de: %d ms\n", DIMMatrix, DIMMatrix, performanceTime);
+    printf("Ejecucion con Tiling: %d x %d es alrededor de: %d ms\n", DIMMatrix, DIMMatrix, performanceTime);
     printf("Tamano de matriz: %d x %d\n", nx, ny);
 
     // SAFE_CALL kernel error
