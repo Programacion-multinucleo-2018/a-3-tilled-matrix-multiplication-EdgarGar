@@ -1,3 +1,6 @@
+//Assignment 3: Tilled Matrix Multiplication
+//Compile with: nvcc -o test TilledMatrixMult.cu -std=c++11
+
 #include "common.h"
 #include <cstdio>
 #include <cstdlib>
@@ -8,7 +11,7 @@
 using namespace std;
 //Tamaño de la matriz
 #define NTM 2000
-//Bloques en este caso se probara con tres 8*8, 16*16 y 32*32
+//Bloques de pruebaen este caso se probara con tres 8*8, 16*16 y 32*32
 #define DIM 8
 
 
