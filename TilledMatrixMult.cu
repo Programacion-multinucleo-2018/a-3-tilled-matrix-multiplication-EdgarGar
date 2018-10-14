@@ -54,7 +54,7 @@ __global__ void multMatrixOnTiles(float *A, float *B, float *C, int nx, int ny) 
   __shared__ float matTempA[DIM][DIM];
   __shared__ float matTempB[DIM][DIM];
 
-  //Llenamos las matrices shared y las inicializamos con puros 0's
+  //Llenamos las matrices shared y iniciado de 0
   for(int i = 0; i < DIM; i ++) {
     for(int j = 0; j < DIM; j++) {
       matTempA[i][j] = 0;
@@ -121,8 +121,6 @@ void checkResult(float *hostRef, float *gpuRef, const int N)
 //Main que ya teniamos de los otros ejemplos solo cambio nombres de la funciones y mandado a llamar de algunas
 int main(int argc, char **argv)
 {
-    printf("%s Starting...\n", argv[0]);
-
     // set up device
     int dev = 0;
     cudaDeviceProp deviceProp;
