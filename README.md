@@ -18,3 +18,9 @@ Rubric:
 3. GPU code is initialized correctly, and the device memory is deallocated.
 4. Implement matrix multiplication using shared memory and tiling.
 5. Report the average processing time and speedup for the different tile sizes.
+
+**NOTES**
+
+1. There is a mistake with your code. The matrices are not equal at the end of the execution. There is a syncthreads missing.
+
+**Grade: 95** 

@@ -10,7 +10,7 @@
 
 using namespace std;
 //Tamaño de la matriz
-#define NTM 2000
+#define NTM 1000
 //Bloques de pruebaen este caso se probara con tres 8*8, 16*16 y 32*32
 #define DIM 8
 
@@ -64,16 +64,21 @@ __global__ void multMatrixOnTiles(float *A, float *B, float *C, int nx, int ny) 
       matTempB[i][j] = 0;
     }
   }
+  __syncthreads();
 
   //vamos a traves de todos los tiles
   for(int i = (DIM + nx - 1)/DIM; i >= 0; i--) {
     if((i * DIM + threadIdx.x) < nx && (iy < ny)) {
       matTempA[threadIdx.y][threadIdx.x] = A[(iy*ny) + (i*DIM+threadIdx.x)];
     }
+    else
+      matTempA[threadIdx.y][threadIdx.x] = 0;
 
     if((i * DIM + threadIdx.y) < ny && (ix < nx)) {
       matTempB[threadIdx.y][threadIdx.x] = B[(i*DIM+threadIdx.y) * nx + ix];
     }
+    else
+      matTempA[threadIdx.y][threadIdx.x] = 0;
     /*//__syncthreads(); command is a block level synchronization barrier. That means it is safe to be used when all threads in a
     //block reach the barrier. It is also possible to use __syncthreads() in conditional code but only when all
     //threads evaluate identically such code otherwise
